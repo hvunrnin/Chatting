@@ -21,13 +21,6 @@ public class ChatService {
     private final ChatRepository chatRepository;
     private String defaultRoomId;
 
-    @PostConstruct
-    public void init() {
-        ChatRoom defaultRoom = createRoom("Default Room");
-        defaultRoomId = defaultRoom.getRoomId();
-        log.info("✅ Default chat room created: {}", defaultRoomId);
-    }
-
     public List<ChatRoom> findAll() {
         return chatRepository.findAll();
     }
@@ -36,12 +29,13 @@ public class ChatService {
         return chatRepository.findById(roomId);
     }
 
-    public ChatRoom createRoom(String name) {
-        String roomId = "7df39e15-0510-44a4-b674-046008f7e89f";
-        ChatRoom chatRoom = ChatRoom.of(roomId, name);
+    public ChatRoom createRoom(String name, String owner) {
+        String roomId = UUID.randomUUID().toString();
+        ChatRoom chatRoom = ChatRoom.of(roomId, name, owner);
         chatRepository.save(roomId, chatRoom);
         return chatRoom;
     }
+
 
     public void handleAction(
             String roomId,

@@ -14,12 +14,14 @@ import java.util.Set;
 public class ChatRoom {
     private final String roomId;
     private final String name;
+    private final String owner;
     private final Set<WebSocketSession> sessions = new HashSet<>();
 
     @Builder
-    public ChatRoom(String roomId, String name) {
+    public ChatRoom(String roomId, String name, String owner) {
         this.roomId = roomId;
         this.name = name;
+        this.owner = owner;
     }
 
     public void sendMessage(TextMessage message) {
@@ -40,10 +42,11 @@ public class ChatRoom {
         sessions.add(session);
     }
 
-    public static ChatRoom of(String roomId, String name) {
+    public static ChatRoom of(String roomId, String name, String owner) {
         return ChatRoom.builder()
                 .roomId(roomId)
                 .name(name)
+                .owner(owner)
                 .build();
     }
 }

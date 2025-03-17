@@ -14,9 +14,9 @@ import java.util.List;
 public class ChatController {
     private final ChatService chatService;
 
-    @PostMapping
-    public ChatRoom createRoom(@RequestParam String name) {
-        return chatService.createRoom(name);
+    @PostMapping("/create")
+    public ChatRoom createRoom(@RequestParam String name, @RequestParam String owner) {
+        return chatService.createRoom(name, owner);
     }
 
     @GetMapping
