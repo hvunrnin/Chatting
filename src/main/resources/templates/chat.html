@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>채팅 테스트</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+</head>
+<body>
+<h2>STOMP 채팅 테스트</h2>
+
+<div>
+    <label>이름: </label>
+    <input type="text" id="username" placeholder="이름 입력">
+    <button onclick="connect()">채팅 시작</button>
+    <button onclick="disconnect()">채팅 종료</button>
+</div>
+
+<div>
+    <label>메시지: </label>
+    <input type="text" id="message" placeholder="메시지 입력">
+    <button onclick="sendMessage()">전송</button>
+</div>
+
+<h3>채팅 내용</h3>
+<ul id="chatArea"></ul>
+
+<script>
+    let stompClient = null;
+
+    function connect() {
+        const socket = new SockJS("/ws-stomp");  // WebSocket 연결
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function (frame) {
+            console.log("STOMP 연결 성공:", frame);
+
+            // 메시지 구독
+            stompClient.subscribe("/sub/topic/public", function (message) {
+                const chatMessage = JSON.parse(message.body);
+                showMessage(chatMessage.sender + ": " + chatMessage.message);
+            });
+
+            // 입장 메시지 전송
+            const username = document.getElementById("username").value;
+            if (username) {
+                stompClient.send("/pub/chat.addUser", {}, JSON.stringify({
+                    sender: username,
+                    message: username + "님이 입장하셨습니다."
+                }));
+            }
+        });
+    }
+
+    function disconnect() {
+        if (stompClient !== null) {
+            stompClient.disconnect();
+        }
+        console.log("STOMP 연결 종료");
+    }
+
+    function sendMessage() {
+        const messageInput = document.getElementById("message").value;
+        const username = document.getElementById("username").value;
+
+        if (stompClient && messageInput) {
+            stompClient.send("/pub/chat.sendMessage", {}, JSON.stringify({
+                sender: username,
+                message: messageInput
+            }));
+            document.getElementById("message").value = "";
+        }
+    }
+
+    function showMessage(message) {
+        const chatArea = document.getElementById("chatArea");
+        const li = document.createElement("li");
+        li.appendChild(document.createTextNode(message));
+        chatArea.appendChild(li);
+    }
+</script>
+</body>
+</html>
