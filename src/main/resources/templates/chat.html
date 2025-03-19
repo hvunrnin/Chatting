@@ -10,6 +10,11 @@
 <h2>STOMP 채팅 테스트</h2>
 
 <div>
+    <label>방 ID: </label>
+    <input type="text" id="roomId" placeholder="방 ID 입력">
+</div>
+
+<div>
     <label>이름: </label>
     <input type="text" id="username" placeholder="이름 입력">
     <button onclick="connect()">채팅 시작</button>
@@ -27,49 +32,79 @@
 
 <script>
     let stompClient = null;
+    let currentRoomId = null;
 
     function connect() {
-        const socket = new SockJS("/ws-stomp");  // WebSocket 연결
+        const roomIdInput = document.getElementById("roomId").value;
+        const usernameInput = document.getElementById("username").value;
+
+        if (!roomIdInput || !usernameInput) {
+            alert("방 ID와 이름을 입력해야 합니다!");
+            return;
+        }
+
+        currentRoomId = roomIdInput;
+        const socket = new SockJS("/ws-stomp");
         stompClient = Stomp.over(socket);
 
         stompClient.connect({}, function (frame) {
             console.log("STOMP 연결 성공:", frame);
 
-            // 메시지 구독
-            stompClient.subscribe("/sub/topic/public", function (message) {
+            // 방이 바뀌었으므로 기존 채팅 내용 초기화
+            clearChatArea();
+
+            // 현재 방 ID에 해당하는 채팅방 구독
+            stompClient.subscribe(`/sub/chat/${currentRoomId}`, function (message) {
+                console.log("📩 받은 메시지:", JSON.parse(message.body));
                 const chatMessage = JSON.parse(message.body);
                 showMessage(chatMessage.sender + ": " + chatMessage.message);
             });
 
             // 입장 메시지 전송
-            const username = document.getElementById("username").value;
-            if (username) {
-                stompClient.send("/pub/chat.addUser", {}, JSON.stringify({
-                    sender: username,
-                    message: username + "님이 입장하셨습니다."
+            if (usernameInput) {
+                stompClient.send(`/pub/chat.addUser/${currentRoomId}`, {}, JSON.stringify({
+                    sender: usernameInput,
+                    message: usernameInput + "님이 입장하셨습니다."
                 }));
             }
         });
     }
 
     function disconnect() {
-        if (stompClient !== null) {
+        if (stompClient) {
+            const usernameInput = document.getElementById("username").value;
+
+            // 서버에 퇴장 메시지 전송
+            stompClient.send(`/pub/chat.leaveUser/${currentRoomId}`, {}, JSON.stringify({
+                sender: usernameInput
+            }));
+
+            // STOMP 연결 종료
             stompClient.disconnect();
+            stompClient = null;
+            console.log("STOMP 연결 종료됨");
+
+            // 화면 초기화
+            clearChatArea();
+            alert("채팅을 종료했습니다.");
         }
-        console.log("STOMP 연결 종료");
     }
 
     function sendMessage() {
         const messageInput = document.getElementById("message").value;
-        const username = document.getElementById("username").value;
+        const usernameInput = document.getElementById("username").value;
 
         if (stompClient && messageInput) {
-            stompClient.send("/pub/chat.sendMessage", {}, JSON.stringify({
-                sender: username,
+            stompClient.send(`/pub/chat.sendMessage/${currentRoomId}`, {}, JSON.stringify({
+                sender: usernameInput,
                 message: messageInput
             }));
             document.getElementById("message").value = "";
         }
+    }
+
+    function clearChatArea() {
+        document.getElementById("chatArea").innerHTML = "";
     }
 
     function showMessage(message) {
@@ -79,5 +114,6 @@
         chatArea.appendChild(li);
     }
 </script>
+
 </body>
 </html>
