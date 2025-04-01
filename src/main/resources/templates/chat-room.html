@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>채팅방 목록</title>
+</head>
+<body>
+<h2>채팅방 목록</h2>
+
+<div>
+    <p><strong>내 유저 ID:</strong> <span id="userIdDisplay"></span></p>
+</div>
+
+<!-- 채팅방 목록 -->
+<ul id="roomList">
+    <!-- 채팅방 목록이 여기에 표시됨 -->
+</ul>
+
+<!-- 채팅방 참여/생성 -->
+<div>
+    <input type="text" id="roomIdInput" placeholder="참여할 채팅방 ID 입력">
+    <button onclick="enterRoom()">입장</button>
+</div>
+
+<script>
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+        alert("로그인 정보가 없습니다. 로그인 페이지로 이동합니다.");
+        window.location.href = "/login";
+    }
+    // 내 채팅방 목록 불러오기
+    fetch(`/api/room/list?userId=${userId}`)
+        .then(res => res.json())
+        .then(data => {
+            const list = document.getElementById("roomList");
+
+            if (data.length === 0) {
+                list.innerHTML = "<li>참여 중인 채팅방이 없습니다.</li>";
+            } else {
+                data.forEach(room => {
+                    const li = document.createElement("li");
+                    li.textContent = `[${room.roomId}] ${room.name}`;
+                    li.onclick = () => goToRoom(room.roomId);
+                    list.appendChild(li);
+                });
+            }
+        });
+
+    function enterRoom() {
+        const roomId = document.getElementById("roomIdInput").value;
+        if (!roomId) {
+            alert("방 ID를 입력해주세요!");
+            return;
+        }
+
+        fetch(`/api/room/join-or-create?roomId=${roomId}&userId=${userId}`, {
+            method: 'POST'
+        })
+            .then(response => {
+                if (response.ok) {
+                    // 방에 참여하거나 생성하고 나면 채팅방 목록 페이지로 리다이렉트
+                    window.location.href = "/chat-room";
+                } else {
+                    alert("채팅방 입장 또는 생성에 실패했습니다.");
+                }
+            })
+            .catch(err => {
+                console.error("채팅방 처리 중 오류:", err);
+                alert("채팅방 입장 또는 생성에 실패했습니다.");
+            });
+    }
+
+    function goToRoom(roomId) {
+        // 향후 구현될 채팅방으로 이동
+        window.location.href = `/chat.html?roomId=${roomId}`;
+    }
+</script>
+
+</body>
+</html>
