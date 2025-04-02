@@ -8,7 +8,7 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 import test.chatting.domain.chat.dto.ChatMessage;
-import test.chatting.domain.chat.dto.ChatRoom;
+import test.chatting.domain.chatmessage.service.ChatMessageMongoService;
 import test.chatting.domain.chat.service.ChatService;
 
 import java.util.List;
@@ -19,28 +19,20 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequestMapping("/chat")
 public class ChatController {
     private final ChatService chatService;
+    private final ChatMessageMongoService chatMessageMongoService;
     private final SimpMessagingTemplate messagingTemplate;
 
     // 사용자별 현재 접속한 방을 저장하는 Map
     private static final ConcurrentHashMap<String, String> userSessions = new ConcurrentHashMap<>();
 
-    @PostMapping("/create")
-    public ChatRoom createRoom(@RequestParam String name, @RequestParam String owner) {
-        return chatService.createRoom(name, owner);
-    }
-
-    @GetMapping
-    public List<ChatRoom> getAll() {
-        return chatService.findAll();
-    }
 
     // 메시지 전송
-    @MessageMapping("/chat.sendMessage/{roomId}")
-    public void sendMessage(@DestinationVariable String roomId, @Payload ChatMessage chatMessage) {
-        System.out.println("📩 서버에서 받은 메시지 (방: " + roomId + "): " + chatMessage.getMessage());
-
-        messagingTemplate.convertAndSend("/sub/chat/" + roomId, chatMessage);
-    }
+//    @MessageMapping("/chat.sendMessage/{roomId}")
+//    public void sendMessage(@DestinationVariable String roomId, @Payload ChatMessage chatMessage) {
+//        System.out.println("📩 서버에서 받은 메시지 (방: " + roomId + "): " + chatMessage.getMessage());
+//
+//        messagingTemplate.convertAndSend("/sub/chat/" + roomId, chatMessage);
+//    }
 
     // 사용자가 입장했을 때
     @MessageMapping("/chat.addUser/{roomId}")
@@ -68,5 +60,18 @@ public class ChatController {
         // 퇴장 메시지 전송
         ChatMessage leaveMessage = ChatMessage.leaveMessage(roomId, username);
         messagingTemplate.convertAndSend("/sub/chat/" + roomId, leaveMessage);
+    }
+
+    @MessageMapping("/chat/message") // 클라이언트가 /pub/chat/message로 보낼 때 처리
+    public void message(ChatMessage message) {
+        // 1. 메시지 저장
+        chatMessageMongoService.saveMessage(
+                message.getRoomId(),
+                message.getSender(),
+                message.getMessage()
+        );
+
+        // 2. 메시지 브로드캐스트
+        messagingTemplate.convertAndSend("/sub/chat/room/" + message.getRoomId(), message);
     }
 }

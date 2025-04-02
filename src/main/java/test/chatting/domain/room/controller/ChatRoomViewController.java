@@ -10,4 +10,9 @@ public class ChatRoomViewController {
     public String chatRoomPage() {
         return "chat-room"; // static/chat-room.html
     }
+
+    @GetMapping("/chat")
+    public String chatPage() {
+        return "chat"; // → templates/chat.html
+    }
 }

@@ -8,6 +8,6 @@ public class LoginViewController {
 
     @GetMapping("/login")
     public String loginPage() {
-        return "login"; // src/main/resources/static/login.html 접근
+        return "login";
     }
 }

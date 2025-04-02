@@ -9,43 +9,27 @@ import test.chatting.config.Util;
 import test.chatting.domain.chat.dto.ChatMessage;
 import test.chatting.domain.chat.dto.ChatRoom;
 import test.chatting.domain.chat.repository.ChatRepository;
+import test.chatting.domain.chatmessage.service.ChatMessageMongoService;
 
 import java.util.*;
-
-import jakarta.annotation.PostConstruct;
 
 @RequiredArgsConstructor
 @Slf4j
 @Service
 public class ChatService {
-    private final ChatRepository chatRepository;
-    private String defaultRoomId;
 
-    public List<ChatRoom> findAll() {
-        return chatRepository.findAll();
-    }
+    private final ChatRepository chatRepository; // WebSocket 세션 저장용이므로 유지
+    private final ChatMessageMongoService chatMessageMongoService;
 
     public ChatRoom findRoomById(String roomId) {
         return chatRepository.findById(roomId);
     }
-
-    public ChatRoom createRoom(String name, String owner) {
-        String roomId = UUID.randomUUID().toString();
-        ChatRoom chatRoom = ChatRoom.of(roomId, name, owner);
-        chatRepository.save(roomId, chatRoom);
-        return chatRoom;
-    }
-
 
     public void handleAction(
             String roomId,
             WebSocketSession session,
             ChatMessage chatMessage
     ) {
-        if (roomId == null || roomId.isEmpty()) {
-            roomId = defaultRoomId; // 기본 채팅방 ID로 변경
-        }
-
         ChatRoom room = findRoomById(roomId);
         if (room == null) {
             throw new IllegalArgumentException("존재하지 않는 채팅방입니다: " + roomId);
@@ -54,6 +38,9 @@ public class ChatService {
         if (isEnterRoom(chatMessage)) {
             room.join(session);
             chatMessage.setMessage(chatMessage.getSender() + "님 환영합니다.");
+        } else {
+            // 채팅 메시지를 MongoDB에 저장
+            chatMessageMongoService.saveMessage(roomId, chatMessage.getSender(), chatMessage.getMessage());
         }
 
         TextMessage textMessage = Util.Chat.resolveTextMessage(chatMessage);

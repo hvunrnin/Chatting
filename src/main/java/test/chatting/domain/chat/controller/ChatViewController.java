@@ -5,9 +5,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class ChatViewController {
-
-    @GetMapping("/chat-room-old")
-    public String chatRoom() {
-        return "chat";
-    }
+//
+//    @GetMapping("/chat-room-old")
+//    public String chatRoom() {
+//        return "chat";
+//    }
 }
