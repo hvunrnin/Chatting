@@ -150,7 +150,7 @@
             // 메시지 구독
             stompClient.subscribe(`/sub/chat/room/${roomId}`, (message) => {
                 const msg = JSON.parse(message.body);
-                appendMessage(msg.sender, msg.message);
+                appendMessage(msg.sender, msg.message, msg.timestamp);
             });
 
             // 입장 메시지 보내기
@@ -167,7 +167,7 @@
             .then(res => res.json())
             .then(messages => {
                 messages.forEach(msg => {
-                    appendMessage(msg.sender, msg.message);
+                    appendMessage(msg.sender, msg.message, msg.timestamp);
                 });
             });
     }
@@ -186,12 +186,20 @@
         input.value = "";
     }
 
-    function appendMessage(sender, message) {
+    function appendMessage(sender, message, timestamp = null) {
         const div = document.createElement("div");
-        div.textContent = `[${sender}] ${message}`;
+
+        let timeStr = "";
+        if (timestamp) {
+            const date = new Date(timestamp);
+            timeStr = ` (${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+        }
+
+        div.textContent = `[${sender}] ${message}${timeStr}`;
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
+
 </script>
 
 </body>
