@@ -104,12 +104,24 @@
                 rooms.forEach(room => {
                     const li = document.createElement("li");
                     li.className = "room";
-                    li.textContent = `[${room.roomId}] ${room.name}`;
-                    li.onclick = () => loadRoom(room.roomId);
+
+                    const roomText = document.createElement("span");
+                    roomText.textContent = `[${room.roomId}] ${room.name}`;
+                    roomText.style.marginRight = "10px";
+                    roomText.style.cursor = "pointer";
+                    roomText.onclick = () => loadRoom(room.roomId);
+
+                    const leaveBtn = document.createElement("button");
+                    leaveBtn.textContent = "나가기";
+                    leaveBtn.onclick = () => leaveRoom(room.roomId);
+
+                    li.appendChild(roomText);
+                    li.appendChild(leaveBtn);
                     roomsEl.appendChild(li);
                 });
             });
     }
+
 
     reloadRoomList();
 
@@ -132,6 +144,28 @@
                 }
             });
     }
+
+    function leaveRoom(roomId) {
+        if (!confirm(`[${roomId}] 채팅방에서 나가시겠습니까?`)) return;
+
+        fetch(`/api/room/leave?roomId=${roomId}&userId=${userId}`, {
+            method: 'DELETE'
+        })
+            .then(res => {
+                if (res.ok) {
+                    alert(`[${roomId}] 방에서 나갔습니다.`);
+                    if (roomId === currentRoomId) {
+                        chatBox.innerHTML = "";
+                        if (stompClient) stompClient.disconnect();
+                        currentRoomId = null;
+                    }
+                    reloadRoomList();
+                } else {
+                    alert("나가기 실패");
+                }
+            });
+    }
+
 
     function loadRoom(roomId) {
         currentRoomId = roomId;
