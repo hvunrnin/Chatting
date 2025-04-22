@@ -24,7 +24,7 @@ public class RoomController {
             @RequestParam String roomId,
             @RequestParam String userId
     ) {
-        chatRoomService.joinRoom(roomId, userId);
+        //chatRoomService.joinRoom(roomId, userId);
     }
 
     // 참여 중인 채팅방 목록

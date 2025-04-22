@@ -187,6 +187,11 @@
                 appendMessage(msg.sender, msg.message, msg.timestamp);
             });
 
+            // 채팅방 목록 갱신 구독 (서버에서 최초 입장 시 알림 보내줌)
+            stompClient.subscribe(`/sub/user/${userId}/room-refresh`, () => {
+                reloadRoomList();
+            });
+
             //  입장 알림을 위한 별도 addUser 메시지 전송
             stompClient.send(`/pub/chat/addUser/${roomId}`, {}, JSON.stringify({
                 sender: userId

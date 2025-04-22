@@ -12,8 +12,12 @@ import test.chatting.domain.chatmessage.service.ChatMessageMongoService;
 import test.chatting.domain.chat.service.ChatService;
 import test.chatting.domain.room.entity.RoomUser;
 import test.chatting.domain.room.repository.RoomUserRepository;
+import test.chatting.domain.room.entity.ChatRoom;
+import test.chatting.domain.room.entity.RoomUser;
+import test.chatting.domain.room.service.ChatRoomService;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
@@ -28,19 +32,13 @@ public class ChatController {
     private final ChatMessageMongoService chatMessageMongoService;
     private final SimpMessagingTemplate messagingTemplate;
     private final RoomUserRepository roomUserRepository;
+    private final ChatRoomService chatRoomService;
 
     // 사용자별 현재 접속한 방을 저장하는 Map
     private static final ConcurrentHashMap<String, String> userSessions = new ConcurrentHashMap<>();
 
     private final Map<String, Set<String>> userJoinedRooms = new ConcurrentHashMap<>();
 
-    // 메시지 전송
-//    @MessageMapping("/chat.sendMessage/{roomId}")
-//    public void sendMessage(@DestinationVariable String roomId, @Payload ChatMessage chatMessage) {
-//        System.out.println("📩 서버에서 받은 메시지 (방: " + roomId + "): " + chatMessage.getMessage());
-//
-//        messagingTemplate.convertAndSend("/sub/chat/" + roomId, chatMessage);
-//    }
 
     // 사용자가 입장했을 때
     @MessageMapping("/chat/addUser/{roomId}")
@@ -53,9 +51,12 @@ public class ChatController {
         headerAccessor.getSessionAttributes().put("username", username);
 
         // 최초 입장인지 확인
-        boolean isFirstEnter = userJoinedRooms
-                .computeIfAbsent(roomId, key -> ConcurrentHashMap.newKeySet())
-                .add(username); // 이 때 최초 입장이면 true 반환됨
+//        boolean isFirstEnter = userJoinedRooms
+//                .computeIfAbsent(roomId, key -> ConcurrentHashMap.newKeySet())
+//                .add(username); // 이 때 최초 입장이면 true 반환됨
+        boolean isFirstEnter = !roomUserRepository.existsById(
+                new RoomUser.RoomUserId(roomId, username)
+        );
 
 
         System.out.println("!!"+isFirstEnter);
@@ -79,6 +80,8 @@ public class ChatController {
             );
 
             messagingTemplate.convertAndSend("/sub/chat/room/" + roomId, enterMessage);
+            chatRoomService.joinRoom(roomId, username);
+            messagingTemplate.convertAndSend("/sub/user/" + username + "/room-refresh", "refresh");
         }
     }
 
