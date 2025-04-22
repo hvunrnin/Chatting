@@ -10,10 +10,14 @@ import org.springframework.web.bind.annotation.*;
 import test.chatting.domain.chat.dto.ChatMessage;
 import test.chatting.domain.chatmessage.service.ChatMessageMongoService;
 import test.chatting.domain.chat.service.ChatService;
+import test.chatting.domain.room.entity.RoomUser;
+import test.chatting.domain.room.repository.RoomUserRepository;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @RequiredArgsConstructor
@@ -23,10 +27,12 @@ public class ChatController {
     private final ChatService chatService;
     private final ChatMessageMongoService chatMessageMongoService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final RoomUserRepository roomUserRepository;
 
     // 사용자별 현재 접속한 방을 저장하는 Map
     private static final ConcurrentHashMap<String, String> userSessions = new ConcurrentHashMap<>();
 
+    private final Map<String, Set<String>> userJoinedRooms = new ConcurrentHashMap<>();
 
     // 메시지 전송
 //    @MessageMapping("/chat.sendMessage/{roomId}")
@@ -37,24 +43,45 @@ public class ChatController {
 //    }
 
     // 사용자가 입장했을 때
-    @MessageMapping("/chat.addUser/{roomId}")
-    public void addUser(@DestinationVariable String roomId, @Payload ChatMessage chatMessage, SimpMessageHeaderAccessor headerAccessor) {
+    @MessageMapping("/chat/addUser/{roomId}")
+    public void addUser(@DestinationVariable String roomId,
+                        @Payload ChatMessage chatMessage,
+                        SimpMessageHeaderAccessor headerAccessor) {
         String username = chatMessage.getSender();
 
-        // 사용자 세션 저장 (현재 방 업데이트)
-        userSessions.put(username, roomId);
+        // 세션 저장
+        headerAccessor.getSessionAttributes().put("username", username);
 
-        // 입장 메시지 전송
-        ChatMessage enterMessage = ChatMessage.builder()
-                .messageType(ChatMessage.MessageType.ENTER)
-                .roomId(roomId)
-                .sender(username)
-                .message(username + "님이 입장하셨습니다.")
-                .timestamp(Instant.now())
-                .build();
+        // 최초 입장인지 확인
+        boolean isFirstEnter = userJoinedRooms
+                .computeIfAbsent(roomId, key -> ConcurrentHashMap.newKeySet())
+                .add(username); // 이 때 최초 입장이면 true 반환됨
 
-        messagingTemplate.convertAndSend("/sub/chat/" + roomId, enterMessage);
+
+        System.out.println("!!"+isFirstEnter);
+
+
+        if (isFirstEnter) {
+            // 최초 입장일 때만 메시지 전송
+            ChatMessage enterMessage = ChatMessage.builder()
+                    .messageType(ChatMessage.MessageType.ENTER)
+                    .roomId(roomId)
+                    .sender(username)
+                    .message(username + "님이 입장하셨습니다.")
+                    .timestamp(Instant.now())
+                    .build();
+
+            chatMessageMongoService.saveMessage(
+                    roomId,
+                    username,
+                    enterMessage.getMessage(),
+                    enterMessage.getTimestamp()
+            );
+
+            messagingTemplate.convertAndSend("/sub/chat/room/" + roomId, enterMessage);
+        }
     }
+
 
     // 사용자가 채팅 종료 버튼을 눌렀을 때
     @MessageMapping("/chat.leaveUser/{roomId}")
