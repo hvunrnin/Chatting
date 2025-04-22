@@ -40,7 +40,14 @@ public class ChatService {
             chatMessage.setMessage(chatMessage.getSender() + "님 환영합니다.");
         } else {
             // 채팅 메시지를 MongoDB에 저장
-            chatMessageMongoService.saveMessage(roomId, chatMessage.getSender(), chatMessage.getMessage());
+            chatMessageMongoService.saveMessage(
+                    roomId,
+                    chatMessage.getSender(),
+                    chatMessage.getMessage(),
+                    chatMessage.getTimestamp() != null
+                            ? chatMessage.getTimestamp().atZone(java.time.ZoneOffset.UTC).toInstant()
+                            : java.time.Instant.now()
+            );
         }
 
         TextMessage textMessage = Util.Chat.resolveTextMessage(chatMessage);

@@ -2,6 +2,8 @@ package test.chatting.domain.chat.dto;
 
 import lombok.*;
 
+import java.time.Instant;
+
 @Getter @Setter
 @AllArgsConstructor
 @NoArgsConstructor
@@ -15,8 +17,15 @@ public class ChatMessage {
     private String roomId;
     private String sender;
     private String message;
+    private Instant timestamp;
 
     public static ChatMessage leaveMessage(String roomId, String sender) {
-        return new ChatMessage(MessageType.LEAVE, roomId, sender, sender + "님이 퇴장하셨습니다.");
+        return ChatMessage.builder()
+                .messageType(MessageType.LEAVE)
+                .roomId(roomId)
+                .sender(sender)
+                .message(sender + "님이 퇴장하셨습니다.")
+                .timestamp(Instant.now())
+                .build();
     }
 }

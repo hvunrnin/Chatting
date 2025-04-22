@@ -226,13 +226,19 @@
         let timeStr = "";
         if (timestamp) {
             const date = new Date(timestamp);
-            timeStr = ` (${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            timeStr = ` (${year}-${month}-${day} ${hours}:${minutes})`;
         }
 
         div.textContent = `[${sender}] ${message}${timeStr}`;
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
+
 
 </script>
 

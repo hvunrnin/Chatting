@@ -17,13 +17,13 @@ public class ChatMessageMongoService {
 
     private final ChatMessageMongoRepository chatMessageMongoRepository;
 
-    public void saveMessage(String roomId, String sender, String content) {
+    public void saveMessage(String roomId, String sender, String content, Instant timestamp) {
         String chunkId = LocalDate.now(ZoneOffset.UTC).toString(); // 예: 2025-04-02
 
         Message newMessage = Message.builder()
                 .sender(sender)
                 .message(content)
-                .timestamp(Instant.now())
+                .timestamp(timestamp != null ? timestamp : Instant.now())
                 .build();
 
         ChatMessageDocument document = chatMessageMongoRepository

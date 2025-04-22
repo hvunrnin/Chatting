@@ -11,6 +11,8 @@ import test.chatting.domain.chat.dto.ChatMessage;
 import test.chatting.domain.chatmessage.service.ChatMessageMongoService;
 import test.chatting.domain.chat.service.ChatService;
 
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,7 +45,14 @@ public class ChatController {
         userSessions.put(username, roomId);
 
         // 입장 메시지 전송
-        ChatMessage enterMessage = new ChatMessage(ChatMessage.MessageType.ENTER, roomId, username, username + "님이 입장하셨습니다.");
+        ChatMessage enterMessage = ChatMessage.builder()
+                .messageType(ChatMessage.MessageType.ENTER)
+                .roomId(roomId)
+                .sender(username)
+                .message(username + "님이 입장하셨습니다.")
+                .timestamp(Instant.now())
+                .build();
+
         messagingTemplate.convertAndSend("/sub/chat/" + roomId, enterMessage);
     }
 
@@ -64,14 +73,23 @@ public class ChatController {
 
     @MessageMapping("/chat/message") // 클라이언트가 /pub/chat/message로 보낼 때 처리
     public void message(ChatMessage message) {
-        // 1. 메시지 저장
+        Instant now = Instant.now();
+
+        // 1. timestamp 없으면 설정
+        if (message.getTimestamp() == null) {
+            message.setTimestamp(now);
+        }
+
+        // 2. 저장
         chatMessageMongoService.saveMessage(
                 message.getRoomId(),
                 message.getSender(),
-                message.getMessage()
+                message.getMessage(),
+                message.getTimestamp()
         );
 
-        // 2. 메시지 브로드캐스트
+        // 3. 전송
         messagingTemplate.convertAndSend("/sub/chat/room/" + message.getRoomId(), message);
     }
+
 }
