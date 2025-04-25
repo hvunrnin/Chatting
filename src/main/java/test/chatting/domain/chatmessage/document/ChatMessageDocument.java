@@ -7,7 +7,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Document(collection = "chat_messages")
 @Getter
@@ -18,16 +20,10 @@ import java.util.List;
 public class ChatMessageDocument {
 
     @Id
-    private String id; // MongoDB 기본 _id
+    private String roomId; // MongoDB에서 _id로 설정
 
-    private String roomId;
-
-    private String chunkId; // 예: "2025-04-02" (yyyy-MM-dd)
-
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
-    private LocalDateTime timestamp;
-
-    private List<Message> messages;
+    // 날짜(yyyy-MM-dd) -> 메시지 리스트
+    private Map<String, List<Message>> messagesByDate = new HashMap<>();
 
     @Getter
     @Setter

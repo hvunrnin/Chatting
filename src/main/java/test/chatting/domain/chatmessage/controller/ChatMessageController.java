@@ -17,15 +17,18 @@ public class ChatMessageController {
 
     @GetMapping("/history")
     public List<ChatMessageDTO> getRecentMessages(@RequestParam String roomId) {
-        return chatMessageMongoRepository.findAllByRoomIdOrderByChunkIdDesc(roomId).stream()
-                .flatMap(doc -> doc.getMessages().stream())
-                .sorted((a, b) -> a.getTimestamp().compareTo(b.getTimestamp()))
-                .map(m -> ChatMessageDTO.builder()
-                        .sender(m.getSender())
-                        .message(m.getMessage())
-                        .timestamp(m.getTimestamp())
-                        .build())
-                .collect(Collectors.toList());
+        return chatMessageMongoRepository.findById(roomId)
+                .map(doc -> doc.getMessagesByDate().values().stream()
+                        .flatMap(List::stream)
+                        .sorted((a, b) -> a.getTimestamp().compareTo(b.getTimestamp()))
+                        .map(m -> ChatMessageDTO.builder()
+                                .sender(m.getSender())
+                                .message(m.getMessage())
+                                .timestamp(m.getTimestamp())
+                                .build())
+                        .collect(Collectors.toList()))
+                .orElse(List.of());
     }
+
 }
 

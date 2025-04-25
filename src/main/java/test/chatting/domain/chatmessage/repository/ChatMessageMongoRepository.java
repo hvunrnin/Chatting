@@ -8,8 +8,4 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ChatMessageMongoRepository extends MongoRepository<ChatMessageDocument, String> {
-
-    Optional<ChatMessageDocument> findByRoomIdAndChunkId(String roomId, String chunkId);
-
-    List<ChatMessageDocument> findAllByRoomIdOrderByChunkIdDesc(String roomId);
 }
