@@ -222,7 +222,7 @@
         if (!msg || !stompClient || !stompClient.connected) return;
 
         stompClient.send("/pub/chat/message", {}, JSON.stringify({
-            type: "TALK",
+            messageType: "TALK",
             roomId: currentRoomId,
             sender: userId,
             message: msg

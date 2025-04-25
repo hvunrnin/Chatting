@@ -15,6 +15,8 @@ import test.chatting.domain.room.repository.RoomUserRepository;
 import test.chatting.domain.room.entity.ChatRoom;
 import test.chatting.domain.room.entity.RoomUser;
 import test.chatting.domain.room.service.ChatRoomService;
+import test.chatting.kafka.dto.ChatKafkaMessage;
+import test.chatting.kafka.producer.KafkaChatProducer;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -33,6 +35,7 @@ public class ChatController {
     private final SimpMessagingTemplate messagingTemplate;
     private final RoomUserRepository roomUserRepository;
     private final ChatRoomService chatRoomService;
+    private final KafkaChatProducer kafkaChatProducer;
 
     // 사용자별 현재 접속한 방을 저장하는 Map
     private static final ConcurrentHashMap<String, String> userSessions = new ConcurrentHashMap<>();
@@ -114,25 +117,19 @@ public class ChatController {
         messagingTemplate.convertAndSend("/sub/chat/room/" + roomId, leaveMessage);
     }
 
-    @MessageMapping("/chat/message") // 클라이언트가 /pub/chat/message로 보낼 때 처리
+    @MessageMapping("/chat/message")
     public void message(ChatMessage message) {
         Instant now = Instant.now();
-
-        // 1. timestamp 없으면 설정
         if (message.getTimestamp() == null) {
             message.setTimestamp(now);
         }
 
-        // 2. 저장
-        chatMessageMongoService.saveMessage(
-                message.getRoomId(),
-                message.getSender(),
-                message.getMessage(),
-                message.getTimestamp()
-        );
+        // Kafka 메시지로 변환
+        ChatKafkaMessage kafkaMessage = ChatKafkaMessage.from(message);
 
-        // 3. 전송
-        messagingTemplate.convertAndSend("/sub/chat/room/" + message.getRoomId(), message);
+        // Kafka로 전송
+        kafkaChatProducer.sendMessage(kafkaMessage);
     }
+
 
 }
