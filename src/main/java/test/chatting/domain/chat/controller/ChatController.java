@@ -58,10 +58,6 @@ public class ChatController {
                 new RoomUser.RoomUserId(roomId, username)
         );
 
-
-        System.out.println("!!"+isFirstEnter);
-
-
         if (isFirstEnter) {
             // 최초 입장일 때만 메시지 전송
             ChatMessage enterMessage = ChatMessage.builder()
@@ -87,7 +83,7 @@ public class ChatController {
 
 
     // 사용자가 채팅 종료 버튼을 눌렀을 때
-    @MessageMapping("/chat.leaveUser/{roomId}")
+    @MessageMapping("/chat/leaveUser/{roomId}")
     public void leaveUser(@DestinationVariable String roomId, @Payload ChatMessage chatMessage) {
         String username = chatMessage.getSender();
 
@@ -96,9 +92,26 @@ public class ChatController {
             userSessions.remove(username); // 사용자 제거
         }
 
-        // 퇴장 메시지 전송
-        ChatMessage leaveMessage = ChatMessage.leaveMessage(roomId, username);
-        messagingTemplate.convertAndSend("/sub/chat/" + roomId, leaveMessage);
+        // 퇴장 메시지 생성
+        Instant now = Instant.now();
+        ChatMessage leaveMessage = ChatMessage.builder()
+                .messageType(ChatMessage.MessageType.LEAVE)
+                .roomId(roomId)
+                .sender(username)
+                .message(username + "님이 퇴장하셨습니다.")
+                .timestamp(now)
+                .build();
+
+        // MongoDB 저장
+        chatMessageMongoService.saveMessage(
+                roomId,
+                username,
+                leaveMessage.getMessage(),
+                leaveMessage.getTimestamp()
+        );
+
+        // 클라이언트 전송
+        messagingTemplate.convertAndSend("/sub/chat/room/" + roomId, leaveMessage);
     }
 
     @MessageMapping("/chat/message") // 클라이언트가 /pub/chat/message로 보낼 때 처리

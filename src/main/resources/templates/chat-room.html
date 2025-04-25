@@ -148,23 +148,30 @@
     function leaveRoom(roomId) {
         if (!confirm(`[${roomId}] 채팅방에서 나가시겠습니까?`)) return;
 
+        // 퇴장 메시지 전송
+        if (stompClient && stompClient.connected) {
+            stompClient.send(`/pub/chat/leaveUser/${roomId}`, {}, JSON.stringify({
+                sender: userId
+            }));
+        }
+
         fetch(`/api/room/leave?roomId=${roomId}&userId=${userId}`, {
             method: 'DELETE'
-        })
-            .then(res => {
-                if (res.ok) {
-                    alert(`[${roomId}] 방에서 나갔습니다.`);
-                    if (roomId === currentRoomId) {
-                        chatBox.innerHTML = "";
-                        if (stompClient) stompClient.disconnect();
-                        currentRoomId = null;
-                    }
-                    reloadRoomList();
-                } else {
-                    alert("나가기 실패");
+        }).then(res => {
+            if (res.ok) {
+                alert(`[${roomId}] 방에서 나갔습니다.`);
+                if (roomId === currentRoomId) {
+                    chatBox.innerHTML = "";
+                    if (stompClient) stompClient.disconnect(); // 이걸 나중에 하자
+                    currentRoomId = null;
                 }
-            });
+                reloadRoomList();
+            } else {
+                alert("나가기 실패");
+            }
+        });
     }
+
 
 
     function loadRoom(roomId) {
@@ -238,7 +245,7 @@
         }
 
         // "입장하셨습니다." 메시지인지 확인
-        if (message.includes("입장하셨습니다.")) {
+        if (message.includes("입장하셨습니다.") || message.includes("퇴장하셨습니다.")) {
             div.style.fontStyle = "italic";
             div.style.color = "gray";
         }
